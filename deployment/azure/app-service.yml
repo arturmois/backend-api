@@ -1,0 +1,116 @@
+$schema: https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#
+contentVersion: 1.0.0.0
+parameters:
+  webAppName:
+    type: string
+    defaultValue: bens-seguros-api
+    metadata:
+      description: Base name of the resource such as web app name and app service plan
+    minLength: 2
+  
+  sku:
+    type: string
+    defaultValue: P1v3
+    metadata:
+      description: The SKU of App Service Plan
+  
+  location:
+    type: string
+    defaultValue: '[resourceGroup().location]'
+    metadata:
+      description: Location for all resources
+  
+  databaseUrl:
+    type: securestring
+    metadata:
+      description: Database connection URL
+  
+  jwtSecret:
+    type: securestring
+    metadata:
+      description: JWT secret key
+  
+  redisUrl:
+    type: securestring
+    metadata:
+      description: Redis connection URL
+
+variables:
+  appServicePlanName: '[concat('asp-', parameters('webAppName'))]'
+  webAppPortalName: '[concat('webapp-', parameters('webAppName'))]'
+
+resources:
+- type: Microsoft.Web/serverfarms
+  apiVersion: 2021-02-01
+  name: '[variables('appServicePlanName')]'
+  location: '[parameters('location')]'
+  sku:
+    name: '[parameters('sku')]'
+  kind: linux
+  properties:
+    reserved: true
+
+- type: Microsoft.Web/sites
+  apiVersion: 2021-02-01
+  name: '[variables('webAppPortalName')]'
+  location: '[parameters('location')]'
+  kind: app,linux,container
+  dependsOn:
+  - '[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]'
+  properties:
+    serverFarmId: '[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]'
+    siteConfig:
+      appSettings:
+      - name: NODE_ENV
+        value: production
+      - name: PORT
+        value: '3000'
+      - name: DATABASE_URL
+        value: '[parameters('databaseUrl')]'
+      - name: JWT_SECRET
+        value: '[parameters('jwtSecret')]'
+      - name: REDIS_URL
+        value: '[parameters('redisUrl')]'
+      - name: WEBSITES_ENABLE_APP_SERVICE_STORAGE
+        value: 'false'
+      - name: WEBSITES_PORT
+        value: '3000'
+      linuxFxVersion: 'DOCKER|bensseguros.azurecr.io/bens-seguros-api:latest'
+      alwaysOn: true
+      ftpsState: Disabled
+      httpLoggingEnabled: true
+      logsDirectorySizeLimit: 35
+      detailedErrorLoggingEnabled: true
+      requestTracingEnabled: true
+      minTlsVersion: '1.2'
+      scmMinTlsVersion: '1.2'
+      use32BitWorkerProcess: false
+      healthCheckPath: '/health'
+    httpsOnly: true
+    clientAffinityEnabled: false
+
+- type: Microsoft.Web/sites/config
+  apiVersion: 2021-02-01
+  name: '[concat(variables('webAppPortalName'), '/logs')]'
+  dependsOn:
+  - '[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]'
+  properties:
+    applicationLogs:
+      fileSystem:
+        level: Information
+    httpLogs:
+      fileSystem:
+        retentionInMb: 35
+        enabled: true
+    failedRequestsTracing:
+      enabled: true
+    detailedErrorMessages:
+      enabled: true
+
+outputs:
+  webAppUrl:
+    type: string
+    value: '[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webAppPortalName'))).defaultHostName)]'
+  webAppName:
+    type: string
+    value: '[variables('webAppPortalName')]'

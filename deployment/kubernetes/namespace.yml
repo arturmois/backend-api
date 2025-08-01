@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bens-seguros
+  labels:
+    name: bens-seguros
+    app: bens-seguros-api

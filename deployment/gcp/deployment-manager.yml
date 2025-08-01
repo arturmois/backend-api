@@ -1,0 +1,59 @@
+imports:
+- path: cloud-sql.jinja
+- path: cloud-run.jinja
+- path: memorystore.jinja
+
+resources:
+# Cloud SQL PostgreSQL instance
+- name: bens-seguros-postgres
+  type: cloud-sql.jinja
+  properties:
+    region: us-central1
+    tier: db-f1-micro
+    databaseVersion: POSTGRES_15
+    backupEnabled: true
+    ipConfiguration:
+      requireSsl: true
+      authorizedNetworks: []
+    maintenanceWindow:
+      hour: 3
+      day: 7
+    
+# Memorystore Redis instance
+- name: bens-seguros-redis
+  type: memorystore.jinja
+  properties:
+    region: us-central1
+    tier: BASIC
+    memorySizeGb: 1
+    redisVersion: REDIS_6_X
+    
+# Cloud Run service
+- name: bens-seguros-api
+  type: cloud-run.jinja
+  properties:
+    region: us-central1
+    image: gcr.io/PROJECT_ID/bens-seguros-api:latest
+    port: 3000
+    maxInstances: 100
+    minInstances: 1
+    cpu: 1000m
+    memory: 2Gi
+    environmentVariables:
+      NODE_ENV: production
+      PORT: "3000"
+    secrets:
+      DATABASE_URL: database-url
+      JWT_SECRET: jwt-secret
+      REDIS_URL: redis-url
+    serviceAccount: bens-seguros-api@PROJECT_ID.iam.gserviceaccount.com
+    cloudSqlConnections:
+      - $(ref.bens-seguros-postgres.connectionName)
+
+outputs:
+- name: cloudRunUrl
+  value: $(ref.bens-seguros-api.status.url)
+- name: databaseConnectionName
+  value: $(ref.bens-seguros-postgres.connectionName)
+- name: redisHost
+  value: $(ref.bens-seguros-redis.host)
