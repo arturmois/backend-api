@@ -7,6 +7,7 @@ import { ValidationError, UnauthorizedError, ConflictError, NotFoundError } from
 import { AuthenticatedRequest } from '@/middleware/auth';
 import { UserService } from '@/services/UserService';
 import { logger } from '@/utils/logger';
+import { User } from '@/services/UserService';
 
 interface TokenPair {
   accessToken: string;
@@ -21,7 +22,7 @@ class AuthController {
     this.userService = new UserService();
   }
 
-  private generateTokens(user: any): TokenPair {
+  private generateTokens(user: User): TokenPair {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       throw new Error('JWT_SECRET is not configured');
@@ -52,7 +53,7 @@ class AuthController {
   }
 
   private sanitizeUser(user: any) {
-    const { password, refreshToken, ...sanitizedUser } = user;
+    const { ...sanitizedUser } = user;
     return sanitizedUser;
   }
 
@@ -99,7 +100,7 @@ class AuthController {
   });
 
   public login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { email, password, rememberMe } = req.body;
+    const { email, password } = req.body;
 
     // Find user by email
     const user = await this.userService.findByEmail(email);
@@ -149,8 +150,8 @@ class AuthController {
       }
 
       // Verify refresh token
-      const decoded = jwt.verify(refreshToken, jwtSecret) as any;
-      
+      const decoded = jwt.verify(refreshToken, jwtSecret) as { id: string };
+
       // Find user and verify refresh token
       const user = await this.userService.findById(decoded.id);
       if (!user || user.refreshToken !== refreshToken) {
@@ -163,7 +164,7 @@ class AuthController {
       // Store new refresh token
       await this.userService.updateRefreshToken(user.id, tokens.refreshToken);
 
-      res.json({
+      res.status(200).json({
         success: true,
         data: {
           accessToken: tokens.accessToken,
@@ -186,7 +187,7 @@ class AuthController {
 
     logger.info('User logged out successfully', { userId: req.user.id });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Logout successful',
     });
@@ -202,7 +203,7 @@ class AuthController {
       throw new NotFoundError('User not found');
     }
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: this.sanitizeUser(user),
     });
@@ -230,7 +231,7 @@ class AuthController {
     // TODO: Send email with reset link
     logger.info('Password reset requested', { userId: user.id, email: user.email });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'If the email exists, a password reset link has been sent.',
     });
@@ -254,7 +255,7 @@ class AuthController {
 
     logger.info('Password reset successfully', { userId: user.id });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Password reset successfully',
     });

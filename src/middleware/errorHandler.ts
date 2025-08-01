@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { logger, logError } from '@/utils/logger';
+import { logError } from '@/utils/logger';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -91,7 +91,7 @@ export const errorHandler = (
   error: AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   // Generate unique request ID for tracking
   const requestId = req.headers['x-request-id'] as string || uuidv4();

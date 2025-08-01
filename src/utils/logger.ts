@@ -1,4 +1,6 @@
 import winston from 'winston';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '@/middleware/auth';
 
 // Define log levels
 const levels = {
@@ -94,7 +96,7 @@ export const logError = (error: Error | unknown, context?: Record<string, unknow
   }
 };
 
-export const logRequest = (req: any, res: any, responseTime: number) => {
+export const logRequest = (req: AuthenticatedRequest, res: Response, responseTime: number) => {
   logger.http('HTTP Request', {
     method: req.method,
     url: req.url,

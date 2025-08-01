@@ -13,7 +13,7 @@ class UserController {
   }
 
   private sanitizeUser(user: any) {
-    const { password, refreshToken, passwordResetToken, emailVerificationToken, ...sanitizedUser } = user;
+    const { ...sanitizedUser } = user;
     return sanitizedUser;
   }
 
